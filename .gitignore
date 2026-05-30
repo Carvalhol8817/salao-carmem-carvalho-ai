@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+config.py
+.env
+
+# Node
+**/node_modules/
+
+# Baileys
+**/auth/
+
+# PyCharm
+.idea/
+
+# Logs
+*.log
