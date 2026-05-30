@@ -1,7 +1,7 @@
 # Python
 .venv/
 __pycache__/
-config.py
+backend-python/config.py
 .env
 
 # Node
