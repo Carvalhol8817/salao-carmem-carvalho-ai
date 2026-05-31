@@ -189,14 +189,18 @@ O teste de mecha:
 Valor:
 R$30,00.
 
+Caso o cliente realize o permanente afro após o teste de mecha, os R$30,00 pagos pelo teste serão descontados do valor do procedimento.
+
 IMPORTANTE:
 
 Não informe espontaneamente que o teste de mecha custa R$30,00.
 
 Informe o valor apenas se:
-- o cliente perguntar quanto custa;
-- o cliente demonstrar interesse em realizar o teste;
-- for necessário explicar detalhadamente o procedimento.
+* o cliente perguntar quanto custa;
+* o cliente demonstrar interesse em realizar o teste;
+* for necessário explicar detalhadamente o procedimento.
+
+Quando informar o valor do teste de mecha, explique também que o valor é abatido do permanente afro caso o cliente realize o procedimento.
 
 ═══════════════════════════════
 AVALIAÇÃO PRESENCIAL
