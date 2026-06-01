@@ -13,7 +13,7 @@ const conversas = {};
 const clientes = {};
 
 function limparNumero(numeroCliente) {
-    return numeroCliente.replace("@s.whatsapp.net", "");
+    return numeroCliente.replace(/@.*/, "");
 }
 
 function salvarNomeCliente(numeroCliente, nomeCliente) {
@@ -99,6 +99,7 @@ async function startBot() {
             if (!message.message || message.key.fromMe) return;
 
             const numeroCliente = message.key.remoteJid;
+            const nomeWhatsapp = message.pushName || "Não identificado";
 
             const texto = (
                 message.message.conversation ||
@@ -146,15 +147,21 @@ async function startBot() {
             if (transferirHumano) {
                 pausarCliente(numeroCliente);
 
-                const nomeParaAlerta = obterNomeCliente(numeroCliente);
+                const nomeInformado = obterNomeCliente(numeroCliente);
                 const numeroLimpo = limparNumero(numeroCliente);
+
+                const nomeParaAlerta =
+                    nomeInformado !== "Não identificado"
+                        ? nomeInformado
+                        : nomeWhatsapp;
 
                 await sock.sendMessage(NUMERO_HUMANO, {
                     text:
 `⚠️ Atendimento humano necessário
 
 Cliente: ${nomeParaAlerta}
-Número: ${numeroLimpo}
+Nome do WhatsApp: ${nomeWhatsapp}
+WhatsApp ID: ${numeroLimpo}
 
 Última mensagem:
 ${texto}
@@ -163,7 +170,7 @@ Motivo:
 ${motivo}
 
 A IA foi pausada para esse cliente por 30 minutos.`
-                });
+});
 
                 console.log(`Cliente ${numeroCliente} pausado por 30 minutos.`);
             }
