@@ -1,6 +1,8 @@
 const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
 const qrcode = require("qrcode-terminal");
+const QRCode = require("qrcode");
 const axios = require("axios");
+const fs = require("fs");
 
 const express = require("express");
 const cors = require("cors");
@@ -16,6 +18,9 @@ const LIMITE_MEMORIA = 10;
 
 let IA_ATIVA = true;
 let WHATSAPP_CONECTADO = false;
+let QR_CODE_BASE64 = null;
+let sockAtual = null;
+let reiniciandoWhatsApp = false;
 
 const clientesPausados = {};
 const conversas = {};
@@ -26,7 +31,13 @@ app.get("/status", (req, res) => {
         ia_ativa: IA_ATIVA,
         whatsapp_conectado: WHATSAPP_CONECTADO,
         clientes_pausados: Object.keys(clientesPausados).length,
-        clientes_conhecidos: Object.keys(clientes).length
+        clientes_conhecidos: Object.keys(clientes).length,
+        qr_code: QR_CODE_BASE64
+        clientes_pausados_lista: Object.keys(clientesPausados).map((numeroCliente) => ({
+            numero: numeroCliente,
+            nome: obterNomeCliente(numeroCliente),
+            pausado_ate: clientesPausados[numeroCliente]
+        }))
     });
 });
 
@@ -47,6 +58,63 @@ app.post("/ia/desligar", (req, res) => {
         sucesso: true,
         mensagem: "IA desligada",
         ia_ativa: IA_ATIVA
+    });
+});
+
+app.post("/whatsapp/reiniciar", async (req, res) => {
+    try {
+        reiniciandoWhatsApp = true;
+
+        if (sockAtual) {
+            try {
+                sockAtual.end();
+            } catch (e) {
+                console.log("Conexão anterior já estava encerrada.");
+            }
+
+            sockAtual = null;
+        }
+
+        fs.rmSync("auth", { recursive: true, force: true });
+
+        WHATSAPP_CONECTADO = false;
+        QR_CODE_BASE64 = null;
+
+        setTimeout(() => {
+            reiniciandoWhatsApp = false;
+            startBot();
+        }, 1000);
+
+        res.json({
+            sucesso: true,
+            mensagem: "WhatsApp reiniciado. Aguarde o novo QR Code."
+        });
+
+    } catch (error) {
+        reiniciandoWhatsApp = false;
+
+        res.status(500).json({
+            sucesso: false,
+            erro: error.message
+        });
+    }
+});
+
+app.post("/cliente/reativar", (req, res) => {
+    const { numeroCliente } = req.body;
+
+    if (!numeroCliente) {
+        return res.status(400).json({
+            sucesso: false,
+            erro: "Número do cliente não informado."
+        });
+    }
+
+    delete clientesPausados[numeroCliente];
+
+    res.json({
+        sucesso: true,
+        mensagem: "IA reativada para o cliente."
     });
 });
 
@@ -110,6 +178,8 @@ async function startBot() {
         auth: state
     });
 
+    sockAtual = sock;
+
     sock.ev.on("creds.update", saveCreds);
 
     sock.ev.on("connection.update", (update) => {
@@ -118,15 +188,29 @@ async function startBot() {
         if (qr) {
             console.log("\nEscaneie o QR Code:\n");
             qrcode.generate(qr, { small: true });
+
+            QRCode.toDataURL(qr)
+                .then((url) => {
+                    QR_CODE_BASE64 = url;
+                })
+                .catch(console.error);
         }
 
         if (connection === "open") {
             WHATSAPP_CONECTADO = true;
+            QR_CODE_BASE64 = null;
+
             console.log("WhatsApp conectado com sucesso!");
         }
 
         if (connection === "close") {
             WHATSAPP_CONECTADO = false;
+
+            if (reiniciandoWhatsApp) {
+                console.log("WhatsApp reiniciando manualmente...");
+                return;
+            }
+
             console.log("Conexão fechada, reiniciando...");
             startBot();
         }

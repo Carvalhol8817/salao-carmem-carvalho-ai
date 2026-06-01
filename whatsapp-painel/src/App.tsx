@@ -5,6 +5,7 @@ type StatusBot = {
   whatsapp_conectado: boolean;
   clientes_pausados: number;
   clientes_conhecidos: number;
+  qr_code: string | null;
 };
 
 export default function PainelWhatsAppSalao() {
@@ -36,6 +37,17 @@ export default function PainelWhatsAppSalao() {
     await buscarStatus();
     setCarregando(false);
   }
+
+async function gerarNovoQRCode() {
+  setCarregando(true);
+
+  await fetch("http://localhost:3001/whatsapp/reiniciar", {
+    method: "POST",
+  });
+
+  await buscarStatus();
+  setCarregando(false);
+}
 
   useEffect(() => {
     buscarStatus();
@@ -122,6 +134,20 @@ export default function PainelWhatsAppSalao() {
             </div>
           </div>
 
+          {!status?.whatsapp_conectado && status?.qr_code && (
+            <div className="bg-white rounded-2xl p-5 mb-6 border border-zinc-200 text-center">
+                <p className="font-semibold text-zinc-800 mb-3">
+                    Escaneie o QR Code para conectar o WhatsApp
+                </p>
+
+                <img
+                  src={status.qr_code}
+                  alt="QR Code do WhatsApp"
+                  className="w-64 h-64 mx-auto"
+                />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={ligarIA}
@@ -139,6 +165,13 @@ export default function PainelWhatsAppSalao() {
               Desligar IA
             </button>
           </div>
+          <button
+              onClick={gerarNovoQRCode}
+              disabled={carregando}
+              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition text-white font-semibold py-4 rounded-2xl text-lg"
+          >
+              Gerar novo QR Code
+          </button>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-zinc-200">
