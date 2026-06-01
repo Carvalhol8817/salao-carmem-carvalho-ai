@@ -2,15 +2,53 @@ const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysocket
 const qrcode = require("qrcode-terminal");
 const axios = require("axios");
 
+const express = require("express");
+const cors = require("cors");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
 const NUMERO_HUMANO = "5543920005386@s.whatsapp.net";
 const TEMPO_PAUSA_HUMANO = 30 * 60 * 1000; // 30 minutos
 const LIMITE_MEMORIA = 10;
 
 let IA_ATIVA = true;
+let WHATSAPP_CONECTADO = false;
 
 const clientesPausados = {};
 const conversas = {};
 const clientes = {};
+
+app.get("/status", (req, res) => {
+    res.json({
+        ia_ativa: IA_ATIVA,
+        whatsapp_conectado: WHATSAPP_CONECTADO,
+        clientes_pausados: Object.keys(clientesPausados).length,
+        clientes_conhecidos: Object.keys(clientes).length
+    });
+});
+
+app.post("/ia/ligar", (req, res) => {
+    IA_ATIVA = true;
+
+    res.json({
+        sucesso: true,
+        mensagem: "IA ligada",
+        ia_ativa: IA_ATIVA
+    });
+});
+
+app.post("/ia/desligar", (req, res) => {
+    IA_ATIVA = false;
+
+    res.json({
+        sucesso: true,
+        mensagem: "IA desligada",
+        ia_ativa: IA_ATIVA
+    });
+});
 
 function limparNumero(numeroCliente) {
     return numeroCliente.replace(/@.*/, "");
@@ -83,10 +121,12 @@ async function startBot() {
         }
 
         if (connection === "open") {
+            WHATSAPP_CONECTADO = true;
             console.log("WhatsApp conectado com sucesso!");
         }
 
         if (connection === "close") {
+            WHATSAPP_CONECTADO = false;
             console.log("Conexão fechada, reiniciando...");
             startBot();
         }
@@ -187,5 +227,9 @@ Erro: ${error.message}`
         }
     });
 }
+
+app.listen(3001, () => {
+    console.log("Painel API rodando na porta 3001");
+});
 
 startBot();
