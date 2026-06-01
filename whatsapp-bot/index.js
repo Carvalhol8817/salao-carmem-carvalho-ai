@@ -32,7 +32,7 @@ app.get("/status", (req, res) => {
         whatsapp_conectado: WHATSAPP_CONECTADO,
         clientes_pausados: Object.keys(clientesPausados).length,
         clientes_conhecidos: Object.keys(clientes).length,
-        qr_code: QR_CODE_BASE64
+        qr_code: QR_CODE_BASE64,
         clientes_pausados_lista: Object.keys(clientesPausados).map((numeroCliente) => ({
             numero: numeroCliente,
             nome: obterNomeCliente(numeroCliente),
