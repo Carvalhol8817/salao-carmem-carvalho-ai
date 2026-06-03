@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 
+type ClientePausado = {
+  numero: string;
+  nome: string;
+  pausado_ate: number;
+};
+
 type StatusBot = {
   ia_ativa: boolean;
   whatsapp_conectado: boolean;
   clientes_pausados: number;
   clientes_conhecidos: number;
   qr_code: string | null;
+  clientes_pausados_lista: ClientePausado[];
 };
 
 export default function PainelWhatsAppSalao() {
@@ -43,6 +50,23 @@ async function gerarNovoQRCode() {
 
   await fetch("http://localhost:3001/whatsapp/reiniciar", {
     method: "POST",
+  });
+
+  await buscarStatus();
+  setCarregando(false);
+}
+
+async function reativarCliente(numeroCliente: string) {
+  setCarregando(true);
+
+  await fetch("http://localhost:3001/cliente/reativar", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      numeroCliente,
+    }),
   });
 
   await buscarStatus();
@@ -132,6 +156,44 @@ async function gerarNovoQRCode() {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="mt-6">
+            <h3 className="font-semibold text-zinc-800 mb-3">
+                Clientes pausados
+            </h3>
+
+            {status?.clientes_pausados_lista?.length ? (
+                <div className="space-y-3">
+                    {status.clientes_pausados_lista.map((cliente) => (
+                        <div
+                            key={cliente.numero}
+                            className="bg-white rounded-2xl p-4 border border-zinc-200 flex items-center justify-between gap-4"
+                        >
+                            <div>
+                                <p className="font-semibold text-zinc-800">
+                                    {cliente.nome || "Não identificado"}
+                                </p>
+                                <p className="text-sm text-zinc-500">
+                                    {cliente.numero}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => reativarCliente(cliente.numero)}
+                                disabled={carregando}
+                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl"
+                            >
+                                Reativar IA
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-zinc-500">
+                  Nenhum cliente pausado no momento.
+                </p>
+            )}
           </div>
 
           {!status?.whatsapp_conectado && status?.qr_code && (
