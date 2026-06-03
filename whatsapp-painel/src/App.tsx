@@ -6,6 +6,15 @@ type ClientePausado = {
   pausado_ate: number;
 };
 
+type ConversaPainel = {
+  numero: string;
+  nome: string;
+  ultima_mensagem: string;
+  origem: "cliente" | "ia";
+  atualizado_em: number;
+  pausado: boolean;
+};
+
 type StatusBot = {
   ia_ativa: boolean;
   whatsapp_conectado: boolean;
@@ -13,6 +22,8 @@ type StatusBot = {
   clientes_conhecidos: number;
   qr_code: string | null;
   clientes_pausados_lista: ClientePausado[];
+  conversas_ativas: ConversaPainel[];
+  ultimas_conversas: ConversaPainel[];
 };
 
 export default function PainelWhatsAppSalao() {
@@ -45,33 +56,27 @@ export default function PainelWhatsAppSalao() {
     setCarregando(false);
   }
 
-async function gerarNovoQRCode() {
-  setCarregando(true);
+  async function gerarNovoQRCode() {
+    setCarregando(true);
+    await fetch("http://localhost:3001/whatsapp/reiniciar", { method: "POST" });
+    await buscarStatus();
+    setCarregando(false);
+  }
 
-  await fetch("http://localhost:3001/whatsapp/reiniciar", {
-    method: "POST",
-  });
+  async function reativarCliente(numeroCliente: string) {
+    setCarregando(true);
 
-  await buscarStatus();
-  setCarregando(false);
-}
+    await fetch("http://localhost:3001/cliente/reativar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ numeroCliente }),
+    });
 
-async function reativarCliente(numeroCliente: string) {
-  setCarregando(true);
-
-  await fetch("http://localhost:3001/cliente/reativar", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      numeroCliente,
-    }),
-  });
-
-  await buscarStatus();
-  setCarregando(false);
-}
+    await buscarStatus();
+    setCarregando(false);
+  }
 
   useEffect(() => {
     buscarStatus();
@@ -85,8 +90,7 @@ async function reativarCliente(numeroCliente: string) {
 
   return (
     <div className="min-h-screen bg-zinc-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-5xl grid md:grid-cols-2 gap-6">
-
+      <div className="w-full max-w-6xl grid md:grid-cols-2 gap-6">
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-zinc-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center text-xl font-bold">
@@ -111,9 +115,7 @@ async function reativarCliente(numeroCliente: string) {
 
           <div className="bg-zinc-100 rounded-2xl p-5 mb-6 border border-zinc-200">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-semibold text-zinc-700">
-                Status da IA
-              </span>
+              <span className="font-semibold text-zinc-700">Status da IA</span>
 
               <span
                 className={`px-4 py-2 rounded-full text-sm font-semibold ${
@@ -125,14 +127,15 @@ async function reativarCliente(numeroCliente: string) {
                 {status?.ia_ativa ? "Ligada" : "Desligada"}
               </span>
             </div>
-            <div className="flex items-center justify-between mt-4">
-                <span className="font-semibold text-zinc-700">
-                    Status do WhatsApp
-                 </span>
 
-                <span
-                    className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                    status?.whatsapp_conectado
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-zinc-700">
+                Status do WhatsApp
+              </span>
+
+              <span
+                className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                  status?.whatsapp_conectado
                     ? "bg-green-100 text-green-700"
                     : "bg-red-100 text-red-700"
                 }`}
@@ -158,55 +161,17 @@ async function reativarCliente(numeroCliente: string) {
             </div>
           </div>
 
-          <div className="mt-6">
-            <h3 className="font-semibold text-zinc-800 mb-3">
-                Clientes pausados
-            </h3>
-
-            {status?.clientes_pausados_lista?.length ? (
-                <div className="space-y-3">
-                    {status.clientes_pausados_lista.map((cliente) => (
-                        <div
-                            key={cliente.numero}
-                            className="bg-white rounded-2xl p-4 border border-zinc-200 flex items-center justify-between gap-4"
-                        >
-                            <div>
-                                <p className="font-semibold text-zinc-800">
-                                    {cliente.nome || "Não identificado"}
-                                </p>
-                                <p className="text-sm text-zinc-500">
-                                    {cliente.numero}
-                                </p>
-                            </div>
-
-                            <button
-                                onClick={() => reativarCliente(cliente.numero)}
-                                disabled={carregando}
-                                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl"
-                            >
-                                Reativar IA
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-sm text-zinc-500">
-                  Nenhum cliente pausado no momento.
-                </p>
-            )}
-          </div>
-
           {!status?.whatsapp_conectado && status?.qr_code && (
             <div className="bg-white rounded-2xl p-5 mb-6 border border-zinc-200 text-center">
-                <p className="font-semibold text-zinc-800 mb-3">
-                    Escaneie o QR Code para conectar o WhatsApp
-                </p>
+              <p className="font-semibold text-zinc-800 mb-3">
+                Escaneie o QR Code para conectar o WhatsApp
+              </p>
 
-                <img
-                  src={status.qr_code}
-                  alt="QR Code do WhatsApp"
-                  className="w-64 h-64 mx-auto"
-                />
+              <img
+                src={status.qr_code}
+                alt="QR Code do WhatsApp"
+                className="w-64 h-64 mx-auto"
+              />
             </div>
           )}
 
@@ -227,64 +192,130 @@ async function reativarCliente(numeroCliente: string) {
               Desligar IA
             </button>
           </div>
+
           <button
-              onClick={gerarNovoQRCode}
-              disabled={carregando}
-              className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition text-white font-semibold py-4 rounded-2xl text-lg"
+            onClick={gerarNovoQRCode}
+            disabled={carregando}
+            className="w-full mt-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition text-white font-semibold py-4 rounded-2xl text-lg"
           >
-              Gerar novo QR Code
+            Gerar novo QR Code
           </button>
         </div>
 
         <div className="bg-white rounded-3xl shadow-xl p-8 border border-zinc-200">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-zinc-800 mb-2">
-              Como usar
+              Atendimento em tempo real
             </h2>
             <p className="text-zinc-500">
-              Esse painel controla o atendimento automático do WhatsApp.
+              Acompanhe conversas ativas, clientes pausados e últimas interações.
             </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200">
-              <p className="font-semibold text-zinc-800 mb-1">
-                🟢 Ligar IA
-              </p>
-              <p className="text-zinc-600">
-                Use quando o salão abrir e quiser que a IA responda os clientes automaticamente.
-              </p>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-zinc-800 mb-3">
+                🟢 Conversas ativas
+              </h3>
+
+              {status?.conversas_ativas?.length ? (
+                <div className="space-y-3">
+                  {status.conversas_ativas.map((conversa) => (
+                    <div
+                      key={conversa.numero}
+                      className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200"
+                    >
+                      <p className="font-semibold text-zinc-800">
+                        {conversa.nome || "Não identificado"}
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        {conversa.origem === "ia" ? "IA respondeu" : "Cliente enviou"}
+                      </p>
+                      <p className="text-zinc-700 mt-2">
+                        {conversa.ultima_mensagem}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Nenhuma conversa ativa no momento.
+                </p>
+              )}
             </div>
 
-            <div className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200">
-              <p className="font-semibold text-zinc-800 mb-1">
-                🔴 Desligar IA
-              </p>
-              <p className="text-zinc-600">
-                Use quando forem embora ou quando quiserem atender tudo manualmente.
-              </p>
+            <div>
+              <h3 className="font-semibold text-zinc-800 mb-3">
+                🔴 Clientes pausados
+              </h3>
+
+              {status?.clientes_pausados_lista?.length ? (
+                <div className="space-y-3">
+                  {status.clientes_pausados_lista.map((cliente) => (
+                    <div
+                      key={cliente.numero}
+                      className="bg-red-50 rounded-2xl p-4 border border-red-200"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-zinc-800">
+                            {cliente.nome || "Não identificado"}
+                          </p>
+                          <p className="text-sm text-zinc-500">
+                            {cliente.numero}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => reativarCliente(cliente.numero)}
+                          disabled={carregando}
+                          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold px-4 py-2 rounded-xl"
+                        >
+                          Reativar IA
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Nenhum cliente pausado no momento.
+                </p>
+              )}
             </div>
 
-            <div className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200">
-              <p className="font-semibold text-zinc-800 mb-1">
-                👥 Clientes pausados
-              </p>
-              <p className="text-zinc-600">
-                Mostra quantos clientes estão com a IA pausada porque foram encaminhados para atendimento humano.
-              </p>
-            </div>
+            <div>
+              <h3 className="font-semibold text-zinc-800 mb-3">
+                💬 Últimas conversas
+              </h3>
 
-            <div className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200">
-              <p className="font-semibold text-zinc-800 mb-1">
-                📌 Importante
-              </p>
-              <p className="text-zinc-600">
-                Para funcionar, o servidor Python e o bot do WhatsApp precisam estar ligados.
-              </p>
+              {status?.ultimas_conversas?.length ? (
+                <div className="space-y-3">
+                  {status.ultimas_conversas.map((conversa) => (
+                    <div
+                      key={conversa.numero}
+                      className="bg-zinc-100 rounded-2xl p-4 border border-zinc-200"
+                    >
+                      <p className="font-semibold text-zinc-800">
+                        {conversa.nome || "Não identificado"}
+                      </p>
+                      <p className="text-sm text-zinc-500">
+                        {conversa.origem === "ia" ? "IA" : "Cliente"}
+                      </p>
+                      <p className="text-zinc-700 mt-2">
+                        {conversa.ultima_mensagem}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-500">
+                  Nenhuma conversa registrada ainda.
+                </p>
+              )}
             </div>
           </div>
         </div>
-
       </div>
     </div>
   );

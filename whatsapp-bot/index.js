@@ -25,6 +25,7 @@ let reiniciandoWhatsApp = false;
 const clientesPausados = {};
 const conversas = {};
 const clientes = {};
+const conversasPainel = {};
 
 app.get("/status", (req, res) => {
     res.json({
@@ -37,7 +38,17 @@ app.get("/status", (req, res) => {
             numero: numeroCliente,
             nome: obterNomeCliente(numeroCliente),
             pausado_ate: clientesPausados[numeroCliente]
-        }))
+        })),
+
+        conversas_ativas: Object.values(conversasPainel)
+            .filter((cliente) => !clienteEstaPausado(cliente.numero))
+            .sort((a, b) => b.atualizado_em - a.atualizado_em)
+            .slice(0, 10),
+
+        ultimas_conversas: Object.values(conversasPainel)
+            .sort((a, b) => b.atualizado_em - a.atualizado_em)
+            .slice(0, 10),
+
     });
 });
 
@@ -171,6 +182,19 @@ function adicionarNaMemoria(numeroCliente, role, content) {
     }
 }
 
+function registrarMensagemPainel(numeroCliente, origem, texto, nomeWhatsapp = "Não identificado") {
+    const nomeCliente = obterNomeCliente(numeroCliente);
+
+    conversasPainel[numeroCliente] = {
+        numero: numeroCliente,
+        nome: nomeCliente !== "Não identificado" ? nomeCliente : nomeWhatsapp,
+        ultima_mensagem: texto,
+        origem,
+        atualizado_em: Date.now(),
+        pausado: clienteEstaPausado(numeroCliente)
+    };
+}
+
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState("auth");
 
@@ -234,6 +258,7 @@ async function startBot() {
             if (!texto) return;
 
             console.log("Cliente:", numeroCliente, texto);
+            registrarMensagemPainel(numeroCliente, "cliente", texto, nomeWhatsapp);
 
             if (clienteEstaPausado(numeroCliente)) {
                 console.log(`IA pausada para ${numeroCliente}`);
@@ -265,6 +290,7 @@ async function startBot() {
 
             await sock.sendMessage(numeroCliente, { text: resposta });
 
+            registrarMensagemPainel(numeroCliente, "ia", resposta, nomeWhatsapp);
             adicionarNaMemoria(numeroCliente, "user", texto);
             adicionarNaMemoria(numeroCliente, "assistant", resposta);
 
