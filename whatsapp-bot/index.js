@@ -3,6 +3,7 @@ const qrcode = require("qrcode-terminal");
 const QRCode = require("qrcode");
 const axios = require("axios");
 const fs = require("fs");
+const path = require("path");
 
 const express = require("express");
 const cors = require("cors");
@@ -21,11 +22,17 @@ let WHATSAPP_CONECTADO = false;
 let QR_CODE_BASE64 = null;
 let sockAtual = null;
 let reiniciandoWhatsApp = false;
+let mensagensHoje = 0;
 
 const clientesPausados = {};
 const conversas = {};
 const clientes = {};
 const conversasPainel = {};
+
+const PASTA_DADOS = path.join(__dirname, "dados");
+const ARQUIVO_CLIENTES = path.join(PASTA_DADOS, "clientes.json");
+const ARQUIVO_PAUSADOS = path.join(PASTA_DADOS, "pausados.json");
+const ARQUIVO_CONVERSAS_PAINEL = path.join(PASTA_DADOS, "conversas-painel.json");
 
 app.get("/status", (req, res) => {
     res.json({
@@ -33,6 +40,7 @@ app.get("/status", (req, res) => {
         whatsapp_conectado: WHATSAPP_CONECTADO,
         clientes_pausados: Object.keys(clientesPausados).length,
         clientes_conhecidos: Object.keys(clientes).length,
+        mensagens_hoje: mensagensHoje,
         qr_code: QR_CODE_BASE64,
         clientes_pausados_lista: Object.keys(clientesPausados).map((numeroCliente) => ({
             numero: numeroCliente,
@@ -43,11 +51,11 @@ app.get("/status", (req, res) => {
         conversas_ativas: Object.values(conversasPainel)
             .filter((cliente) => !clienteEstaPausado(cliente.numero))
             .sort((a, b) => b.atualizado_em - a.atualizado_em)
-            .slice(0, 10),
+            .slice(0, 20),
 
         ultimas_conversas: Object.values(conversasPainel)
             .sort((a, b) => b.atualizado_em - a.atualizado_em)
-            .slice(0, 10),
+            .slice(0, 20),
 
     });
 });
@@ -122,6 +130,7 @@ app.post("/cliente/reativar", (req, res) => {
     }
 
     delete clientesPausados[numeroCliente];
+    salvarDados();
 
     res.json({
         sucesso: true,
@@ -133,6 +142,49 @@ function limparNumero(numeroCliente) {
     return numeroCliente.replace(/@.*/, "");
 }
 
+function garantirPastaDados() {
+    if (!fs.existsSync(PASTA_DADOS)) {
+        fs.mkdirSync(PASTA_DADOS);
+    }
+}
+
+function lerJSON(caminhoArquivo, valorPadrao) {
+    try {
+        if (!fs.existsSync(caminhoArquivo)) {
+            return valorPadrao;
+        }
+
+        const conteudo = fs.readFileSync(caminhoArquivo, "utf-8");
+        return JSON.parse(conteudo);
+    } catch (error) {
+        console.error("Erro ao ler JSON:", caminhoArquivo, error.message);
+        return valorPadrao;
+    }
+}
+
+function salvarJSON(caminhoArquivo, dados) {
+    try {
+        garantirPastaDados();
+        fs.writeFileSync(caminhoArquivo, JSON.stringify(dados, null, 2));
+    } catch (error) {
+        console.error("Erro ao salvar JSON:", caminhoArquivo, error.message);
+    }
+}
+
+function carregarDados() {
+    Object.assign(clientes, lerJSON(ARQUIVO_CLIENTES, {}));
+    Object.assign(clientesPausados, lerJSON(ARQUIVO_PAUSADOS, {}));
+    Object.assign(conversasPainel, lerJSON(ARQUIVO_CONVERSAS_PAINEL, {}));
+
+    console.log("Dados carregados com sucesso.");
+}
+
+function salvarDados() {
+    salvarJSON(ARQUIVO_CLIENTES, clientes);
+    salvarJSON(ARQUIVO_PAUSADOS, clientesPausados);
+    salvarJSON(ARQUIVO_CONVERSAS_PAINEL, conversasPainel);
+}
+
 function salvarNomeCliente(numeroCliente, nomeCliente) {
     if (!nomeCliente) return;
 
@@ -140,6 +192,7 @@ function salvarNomeCliente(numeroCliente, nomeCliente) {
         ...(clientes[numeroCliente] || {}),
         nome: nomeCliente
     };
+    salvarDados();
 }
 
 function obterNomeCliente(numeroCliente) {
@@ -161,6 +214,7 @@ function clienteEstaPausado(numeroCliente) {
 
 function pausarCliente(numeroCliente) {
     clientesPausados[numeroCliente] = Date.now() + TEMPO_PAUSA_HUMANO;
+    salvarDados();
 }
 
 function iniciarMemoria(numeroCliente) {
@@ -184,15 +238,21 @@ function adicionarNaMemoria(numeroCliente, role, content) {
 
 function registrarMensagemPainel(numeroCliente, origem, texto, nomeWhatsapp = "Não identificado") {
     const nomeCliente = obterNomeCliente(numeroCliente);
+    const conversaAtual = conversasPainel[numeroCliente] || {};
 
     conversasPainel[numeroCliente] = {
         numero: numeroCliente,
         nome: nomeCliente !== "Não identificado" ? nomeCliente : nomeWhatsapp,
-        ultima_mensagem: texto,
+        ultima_mensagem_cliente:
+            origem === "cliente" ? texto : conversaAtual.ultima_mensagem_cliente || "",
+        ultima_resposta_ia:
+            origem === "ia" ? texto : conversaAtual.ultima_resposta_ia || "",
         origem,
         atualizado_em: Date.now(),
-        pausado: clienteEstaPausado(numeroCliente)
+        pausado: clienteEstaPausado(numeroCliente),
+        nova_mensagem: origem === "cliente"
     };
+    salvarDados();
 }
 
 async function startBot() {
@@ -247,6 +307,12 @@ async function startBot() {
             if (!message.message || message.key.fromMe) return;
 
             const numeroCliente = message.key.remoteJid;
+                if (
+                    numeroCliente === "status@broadcast" ||
+                    numeroCliente?.includes("status")
+                ) {
+                    return;
+                }
             const nomeWhatsapp = message.pushName || "Não identificado";
 
             const texto = (
@@ -258,6 +324,7 @@ async function startBot() {
             if (!texto) return;
 
             console.log("Cliente:", numeroCliente, texto);
+            mensagensHoje++;
             registrarMensagemPainel(numeroCliente, "cliente", texto, nomeWhatsapp);
 
             if (clienteEstaPausado(numeroCliente)) {
@@ -337,6 +404,8 @@ Erro: ${error.message}`
         }
     });
 }
+
+carregarDados();
 
 app.listen(3001, () => {
     console.log("Painel API rodando na porta 3001");

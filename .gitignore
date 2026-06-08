@@ -15,3 +15,5 @@ backend-python/config.py
 
 # Logs
 *.log
+
+whatsapp-bot/dados/
