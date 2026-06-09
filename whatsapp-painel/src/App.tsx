@@ -95,6 +95,22 @@ export default function PainelWhatsAppSalao() {
     setCarregando(false);
   }
 
+  async function encerrarSistema() {
+    const confirmar = window.confirm(
+      "Tem certeza que deseja encerrar o sistema?"
+    );
+
+    if (!confirmar) return;
+
+    setCarregando(true);
+
+    await fetch("http://localhost:3001/sistema/encerrar", {
+      method: "POST",
+    });
+
+    alert("Sistema encerrado com segurança. Pode fechar esta janela.");
+  }
+
   async function reativarCliente(numeroCliente: string) {
     setCarregando(true);
 
@@ -252,7 +268,9 @@ export default function PainelWhatsAppSalao() {
               Reconectar WhatsApp / Gerar QR Code
             </button>
             <button
-              className="w-full mt-3 bg-red-900 hover:bg-red-800 text-white py-3 rounded-xl font-semibold"
+              onClick={encerrarSistema}
+              disabled={carregando}
+              className="w-full mt-3 bg-red-900 hover:bg-red-800 disabled:opacity-50 text-white py-3 rounded-xl font-semibold"
             >
               Encerrar Sistema
             </button>

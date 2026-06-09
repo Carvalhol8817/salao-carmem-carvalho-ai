@@ -138,6 +138,19 @@ app.post("/cliente/reativar", (req, res) => {
     });
 });
 
+app.post("/sistema/encerrar", (req, res) => {
+    salvarDados();
+
+    res.json({
+        sucesso: true,
+        mensagem: "Sistema encerrando com segurança."
+    });
+
+    setTimeout(() => {
+        process.exit(0);
+    }, 500);
+});
+
 function limparNumero(numeroCliente) {
     return numeroCliente.replace(/@.*/, "");
 }
