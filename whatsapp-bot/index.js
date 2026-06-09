@@ -354,9 +354,12 @@ async function startBot() {
 
             const historicoAntesDaMensagem = [...conversas[numeroCliente]];
 
+            const nomeConhecido = obterNomeCliente(numeroCliente);
+
             const response = await axios.post("http://localhost:5000/chat", {
                 mensagem: texto,
-                historico: historicoAntesDaMensagem
+                historico: historicoAntesDaMensagem,
+                nome_cliente_conhecido: nomeConhecido !== "Não identificado" ? nomeConhecido : null
             });
 
             const resposta = response.data.resposta;

@@ -14,6 +14,7 @@ def chat():
         data = request.get_json(force=True)
         mensagem = data.get("mensagem", "")
         historico = data.get("historico", [])
+        nome_cliente_conhecido = data.get("nome_cliente_conhecido")
 
         if not mensagem:
             return jsonify({
@@ -64,6 +65,16 @@ IDENTIFICAÇÃO DO CLIENTE:
 - Não invente nomes.
 - Se o histórico já possuir o nome do cliente, utilize o mesmo nome.
 """
+                },
+                {
+                    "role": "system",
+                    "content": f"""
+                Nome conhecido do cliente: {nome_cliente_conhecido if nome_cliente_conhecido else "não informado"}.
+
+                REGRA PRIORITÁRIA:
+                Se o nome conhecido do cliente for diferente de "não informado", NÃO pergunte o nome novamente em hipótese nenhuma.
+                Se o cliente perguntar "você lembra meu nome?", responda usando o nome conhecido.
+                """
                 },
                 *historico,
                 {"role": "user", "content": mensagem}
