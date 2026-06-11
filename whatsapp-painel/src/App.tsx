@@ -97,18 +97,22 @@ export default function PainelWhatsAppSalao() {
 
   async function encerrarSistema() {
     const confirmar = window.confirm(
-      "Tem certeza que deseja encerrar o sistema?"
+      "Encerrar o sistema?"
     );
 
     if (!confirmar) return;
 
     setCarregando(true);
 
-    await fetch("http://localhost:3001/sistema/encerrar", {
-      method: "POST",
-    });
-
-    alert("Sistema encerrado com segurança. Pode fechar esta janela.");
+    try {
+      await fetch("http://localhost:3001/sistema/encerrar", {
+        method: "POST",
+      });
+    } catch (error) {
+      console.log("Sistema já estava encerrado ou Node não respondeu.");
+    } finally {
+      window.close();
+    }
   }
 
   async function reativarCliente(numeroCliente: string) {
@@ -172,41 +176,34 @@ export default function PainelWhatsAppSalao() {
           )}
 
           <div className="bg-zinc-100 rounded-2xl p-5 mb-6 border border-zinc-200">
-            <div className="flex items-center justify-between mb-4">
-              <span className="font-semibold text-zinc-700">Status da IA</span>
-
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                  status?.ia_ativa
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {status?.ia_ativa ? "Ligada" : "Desligada"}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between mb-4">
-              <span className="font-semibold text-zinc-700">
-                Status do WhatsApp
-              </span>
-
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                  status?.whatsapp_conectado
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
-                }`}
-              >
-                {status?.whatsapp_conectado ? "Conectado" : "Desconectado"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mt-4">
               <div className="bg-white rounded-2xl p-4 border border-zinc-200">
-                <p className="text-sm text-zinc-500">Clientes pausados</p>
-                <p className="text-3xl font-bold text-zinc-800">
-                  {status?.clientes_pausados ?? 0}
+                <p className="text-sm text-zinc-500">
+                  IA 🤖
+                </p>
+
+                <p className={`text-2xl font-bold ${
+                  status?.ia_ativa
+                    ? "text-green-600"
+                    : "text-red-500"
+                }`}>
+                  {status?.ia_ativa ? "Ligada" : "Desligada"}
+                </p>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 border border-zinc-200">
+                <p className="text-sm text-zinc-500">
+                  WhatsApp 📱
+                </p>
+
+                <p className={`text-2xl font-bold ${
+                  status?.whatsapp_conectado
+                    ? "text-green-600"
+                    : "text-red-500"
+                }`}>
+                  {status?.whatsapp_conectado
+                    ? "Conectado"
+                    : "Desconectado"}
                 </p>
               </div>
 
@@ -218,6 +215,14 @@ export default function PainelWhatsAppSalao() {
                   {status?.mensagens_hoje ?? 0}
                 </p>
               </div>
+
+              <div className="bg-white rounded-2xl p-4 border border-zinc-200">
+                <p className="text-sm text-zinc-500">Clientes pausados</p>
+                <p className="text-3xl font-bold text-zinc-800">
+                  {status?.clientes_pausados ?? 0}
+                </p>
+              </div>
+
             </div>
           </div>
 

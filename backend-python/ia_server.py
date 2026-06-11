@@ -69,11 +69,17 @@ IDENTIFICAÇÃO DO CLIENTE:
                 {
                     "role": "system",
                     "content": f"""
+                REGRA PRIORITÁRIA ABSOLUTA:
+
                 Nome conhecido do cliente: {nome_cliente_conhecido if nome_cliente_conhecido else "não informado"}.
 
-                REGRA PRIORITÁRIA:
-                Se o nome conhecido do cliente for diferente de "não informado", NÃO pergunte o nome novamente em hipótese nenhuma.
-                Se o cliente perguntar "você lembra meu nome?", responda usando o nome conhecido.
+                Se o nome conhecido for diferente de "não informado":
+                - NÃO pergunte o nome novamente.
+                - Use esse nome na resposta.
+                - Se o cliente perguntar se você lembra o nome, diga o nome.
+
+                Se o nome conhecido for "não informado":
+                - peça o nome antes de continuar o atendimento.
                 """
                 },
                 *historico,

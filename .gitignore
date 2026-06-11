@@ -17,3 +17,5 @@ backend-python/config.py
 *.log
 
 whatsapp-bot/dados/
+app-desktop/package.json
+app-desktop/package-lock.json

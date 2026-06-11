@@ -16,6 +16,7 @@ app.use(express.json());
 const NUMERO_HUMANO = "5543920005386@s.whatsapp.net";
 const TEMPO_PAUSA_HUMANO = 30 * 60 * 1000; // 30 minutos
 const LIMITE_MEMORIA = 10;
+const LIMITE_CONVERSA_ATIVA = 24 * 60 * 60 * 1000; // 24h
 
 let IA_ATIVA = true;
 let WHATSAPP_CONECTADO = false;
@@ -49,6 +50,9 @@ app.get("/status", (req, res) => {
         })),
 
         conversas_ativas: Object.values(conversasPainel)
+            .filter((conversa) =>
+                Date.now() - conversa.atualizado_em < LIMITE_CONVERSA_ATIVA
+            )
             .filter((cliente) => !clienteEstaPausado(cliente.numero))
             .sort((a, b) => b.atualizado_em - a.atualizado_em)
             .slice(0, 20),
