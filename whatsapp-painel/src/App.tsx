@@ -356,6 +356,22 @@ export default function PainelWhatsAppSalao() {
                           {conversa.nome || "Não identificado"}
                         </p>
 
+                        <button
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded-lg text-xs"
+                          onClick={async () => {
+                            await fetch(
+                              `http://localhost:3001/cliente/${encodeURIComponent(conversa.numero)}/pausar`,
+                              {
+                                method: "POST",
+                              }
+                            );
+
+                            buscarStatus();
+                          }}
+                        >
+                          ⏸
+                        </button>
+
                         {conversa.nova_mensagem && (
                           <span className="inline-block text-xs bg-green-500 text-white px-2 py-1 rounded-full mt-1">
                             🔔 Nova mensagem

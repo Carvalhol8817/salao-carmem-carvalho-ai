@@ -17,6 +17,7 @@ const NUMERO_HUMANO = "5543920005386@s.whatsapp.net";
 const TEMPO_PAUSA_HUMANO = 30 * 60 * 1000; // 30 minutos
 const LIMITE_MEMORIA = 10;
 const LIMITE_CONVERSA_ATIVA = 24 * 60 * 60 * 1000; // 24h
+const ENVIANDO_IA = new Set();
 
 let IA_ATIVA = true;
 let WHATSAPP_CONECTADO = false;
@@ -139,6 +140,16 @@ app.post("/cliente/reativar", (req, res) => {
     res.json({
         sucesso: true,
         mensagem: "IA reativada para o cliente."
+    });
+});
+
+app.post("/cliente/:numero/pausar", (req, res) => {
+    const numeroCliente = decodeURIComponent(req.params.numero);
+
+    pausarCliente(numeroCliente);
+
+    res.json({
+        sucesso: true
     });
 });
 
@@ -328,6 +339,10 @@ async function startBot() {
             const numeroCliente = message.key.remoteJid;
 
             if (message.key.fromMe) {
+                if (ENVIANDO_IA.has(numeroCliente)) {
+                    return;
+                }
+
                 if (
                     numeroCliente &&
                     numeroCliente !== NUMERO_HUMANO &&
@@ -335,6 +350,7 @@ async function startBot() {
                     !numeroCliente.includes("status")
                 ) {
                     pausarCliente(numeroCliente);
+
                     registrarMensagemPainel(
                         numeroCliente,
                         "humano",
@@ -399,7 +415,13 @@ async function startBot() {
                 salvarNomeCliente(numeroCliente, nomeCliente);
             }
 
+            ENVIANDO_IA.add(numeroCliente);
+
             await sock.sendMessage(numeroCliente, { text: resposta });
+
+            setTimeout(() => {
+                ENVIANDO_IA.delete(numeroCliente);
+            }, 3000);
 
             registrarMensagemPainel(numeroCliente, "ia", resposta, nomeWhatsapp);
             adicionarNaMemoria(numeroCliente, "user", texto);
