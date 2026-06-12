@@ -263,7 +263,9 @@ function registrarMensagemPainel(numeroCliente, origem, texto, nomeWhatsapp = "N
         ultima_mensagem_cliente:
             origem === "cliente" ? texto : conversaAtual.ultima_mensagem_cliente || "",
         ultima_resposta_ia:
-            origem === "ia" ? texto : conversaAtual.ultima_resposta_ia || "",
+            origem === "ia" || origem === "humano"
+                ? texto
+                : conversaAtual.ultima_resposta_ia || "",
         origem,
         atualizado_em: Date.now(),
         pausado: clienteEstaPausado(numeroCliente),
@@ -321,9 +323,31 @@ async function startBot() {
         try {
             const message = msg.messages[0];
 
-            if (!message.message || message.key.fromMe) return;
+            if (!message.message) return;
 
             const numeroCliente = message.key.remoteJid;
+
+            if (message.key.fromMe) {
+                if (
+                    numeroCliente &&
+                    numeroCliente !== NUMERO_HUMANO &&
+                    numeroCliente !== "status@broadcast" &&
+                    !numeroCliente.includes("status")
+                ) {
+                    pausarCliente(numeroCliente);
+                    registrarMensagemPainel(
+                        numeroCliente,
+                        "humano",
+                        "Atendimento manual iniciado. IA pausada por 30 minutos.",
+                        "Atendimento humano"
+                    );
+
+                    console.log(`IA pausada automaticamente porque humano respondeu ${numeroCliente}`);
+                }
+
+                return;
+            }
+
                 if (
                     numeroCliente === "status@broadcast" ||
                     numeroCliente?.includes("status")
