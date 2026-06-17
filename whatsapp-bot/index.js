@@ -135,6 +135,16 @@ app.post("/cliente/reativar", (req, res) => {
     }
 
     delete clientesPausados[numeroCliente];
+
+    if (conversasPainel[numeroCliente]) {
+        conversasPainel[numeroCliente].pausado = false;
+        conversasPainel[numeroCliente].nova_mensagem = false;
+        conversasPainel[numeroCliente].origem = "humano";
+        conversasPainel[numeroCliente].ultima_resposta_ia =
+            conversasPainel[numeroCliente].ultima_resposta_ia ||
+            "IA reativada para este cliente.";
+    }
+
     salvarDados();
 
     res.json({
